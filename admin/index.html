@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>摰?噸蝘? - ?折蝞∠?蝟餌絞 (SpeedTech Admin Portal)</title>
+  <link rel="shortcut icon" href="../img/base/favicon.ico">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              500: '#0066cc',
+              600: '#0052a3',
+              700: '#003d7a'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [v-cloak] { display: none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-sans min-h-screen">
+  <div id="app" v-cloak>
+
+    <!-- 1. ?芰?亦??(AD SSO ?餃?? -->
+    <div v-if="!isLoggedIn" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-brand-700 p-4">
+      <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-slate-100">
+        <div class="text-center mb-8">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-50 mb-4 border border-brand-100">
+            <span class="text-2xl font-black text-brand-600">ST</span>
+          </div>
+          <h1 class="text-2xl font-bold text-slate-900">摰?噸蝘? 摰雯?折蝞∠?蝟餌絞</h1>
+          <p class="text-sm text-slate-500 mt-1">SpeedTech Corporate Web Admin Portal</p>
+          <div class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+            AD 蝬脣?撽?????銝?(ST-AD-01)
+          </div>
+        </div>
+
+        <form @submit.prevent="handleLogin" class="space-y-5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">?砍 AD 撣唾?</label>
+            <input v-model="loginForm.account" type="text" required placeholder="靘?: st90506335 ??admin"
+                   class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm transition">
+            <p class="text-xs text-slate-400 mt-1">?舀頛詨 Windows 蝬脣?撣唾??恣?撣唾?</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">?餃撖Ⅳ</label>
+            <input v-model="loginForm.password" type="password" required placeholder="隢撓??Windows 蝬脣??餃撖Ⅳ"
+                   class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm transition">
+          </div>
+
+          <div v-if="loginError" class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start space-x-2">
+            <span class="font-bold">??</span>
+            <span>{{ loginError }}</span>
+          </div>
+
+          <button type="submit" :disabled="isLoggingIn"
+                  class="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-medium text-sm transition shadow-lg shadow-brand-500/30 flex items-center justify-center space-x-2 disabled:opacity-50">
+            <span v-if="isLoggingIn" class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
+            <span>{{ isLoggingIn ? '甇??雯??霅澈??..' : '隞?AD 蝬脣?撣唾?摰?餃' }}</span>
+          </button>
+        </form>
+
+        <div class="mt-6 pt-6 border-t border-slate-100 text-center text-xs text-slate-400">
+          摰?噸蝘??∩遢???砍鞈???穢 2026 SpeedTech. All rights reserved.
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 撌脩?亙??唬蜓?嗆? -->
+    <div v-else class="min-h-screen flex flex-col">
+      <!-- ?撠??-->
+      <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <span class="text-xl font-black text-brand-600 tracking-wider">SpeedTech</span>
+            <span class="text-slate-300">|</span>
+            <span class="font-bold text-slate-800 text-sm">?折蝞∠?敺</span>
+            <span class="text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">SWB Node</span>
+          </div>
+
+          <div class="flex items-center space-x-4">
+            <div class="text-right hidden sm:block">
+              <div class="text-xs font-semibold text-slate-900 flex items-center justify-end space-x-1.5">
+                <span>{{ currentUser.name || currentUser.account }}</span>
+                <span v-for="r in currentUser.roles" :key="r"
+                      class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-50 text-brand-600 border border-brand-200">
+                  {{ r }}
+                </span>
+              </div>
+              <div class="text-[11px] text-slate-400">{{ currentUser.department || '摰?噸蝘?' }} ({{ currentUser.account }})</div>
+            </div>
+
+            <button @click="handleLogout"
+                    class="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-medium transition flex items-center space-x-1">
+              <span>?餃</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- 銝餉?? (?湧?甈?+ ?批捆?) -->
+      <div class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row gap-6">
+        
+        <!-- 撌血?詨 -->
+        <aside class="w-full md:w-56 shrink-0">
+          <nav class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm space-y-1">
+            <button @click="currentTab = 'dashboard'"
+                    :class="currentTab === 'dashboard' ? 'bg-brand-50 text-brand-600 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
+                    class="w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl text-sm transition text-left">
+              <span>??</span>
+              <span>蝟餌絞蝮質汗</span>
+            </button>
+
+            <button @click="currentTab = 'news'"
+                    :class="currentTab === 'news' ? 'bg-brand-50 text-brand-600 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
+                    class="w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl text-sm transition text-left">
+              <span>?</span>
+              <span>??唳??舐撣?/span>
+              <span v-if="!canEditNews" class="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">?航?</span>
+            </button>
+
+            <button @click="currentTab = 'contacts'"
+                    :class="currentTab === 'contacts' ? 'bg-brand-50 text-brand-600 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
+                    class="w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl text-sm transition text-left">
+              <span>??</span>
+              <span>?舐窗隢株岷??</span>
+              <span v-if="pendingInquiriesCount > 0" class="ml-auto text-[10px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-bold">
+                {{ pendingInquiriesCount }}
+              </span>
+            </button>
+
+            <button v-if="isSuperAdmin" @click="currentTab = 'users'"
+                    :class="currentTab === 'users' ? 'bg-brand-50 text-brand-600 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
+                    class="w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl text-sm transition text-left border-t border-slate-100 pt-2 mt-2">
+              <span>?</span>
+              <span>撣唾????脫???/span>
+            </button>
+
+            <a href="/" target="_blank"
+               class="w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl text-xs text-slate-500 hover:bg-slate-50 transition text-left pt-2 border-t border-slate-100 mt-2">
+              <span>??</span>
+              <span>??摰?噸?祇?摰雯 ??/span>
+            </a>
+          </nav>
+        </aside>
+
+        <!-- ?喳?批捆?憛?-->
+        <main class="flex-1 min-w-0">
+
+          <!-- 閮敶??內 -->
+          <div v-if="alertMessage"
+               :class="alertType === 'success' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'"
+               class="mb-4 p-4 rounded-xl border flex items-center justify-between text-sm shadow-sm transition">
+            <span>{{ alertMessage }}</span>
+            <button @click="alertMessage = ''" class="text-xs font-bold opacity-60 hover:opacity-100">??/button>
+          </div>
+
+          <!-- TAB 1: 蝟餌絞蝮質汗 (Dashboard) -->
+          <div v-if="currentTab === 'dashboard'" class="space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="text-xs font-medium text-slate-400">撌脩撣??唳???/div>
+                <div class="text-3xl font-black text-slate-800 mt-2">{{ newsList.length }} <span class="text-xs font-normal text-slate-400">??/span></div>
+                <div class="text-xs text-emerald-600 mt-2 flex items-center">???郊?澆??蝬脣?蝷箔葉</div>
+              </div>
+              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="text-xs font-medium text-slate-400">敺??蝯∟”??/div>
+                <div class="text-3xl font-black text-rose-600 mt-2">{{ pendingInquiriesCount }} <span class="text-xs font-normal text-slate-400">蝑?/span></div>
+                <div class="text-xs text-slate-400 mt-2">蝝航???: {{ contactList.length }} 蝑?/div>
+              </div>
+              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="text-xs font-medium text-slate-400">敺?嗆??銵ㄖ</div>
+                <div class="text-lg font-bold text-slate-800 mt-2">Node 20 + PG 16</div>
+                <div class="text-xs text-emerald-600 mt-2">Docker Compose 摰孵?ａ?</div>
+              </div>
+            </div>
+
+            <!-- 甈?鞈??∠? -->
+            <div class="bg-gradient-to-r from-brand-50 to-blue-50 p-6 rounded-2xl border border-brand-100 shadow-sm">
+              <h3 class="text-base font-bold text-brand-700">?? 甇∟???嚗{ currentUser.name }}嚗?/h3>
+              <p class="text-xs text-slate-600 mt-1">?函??亦? AD 頨怠??撅祆???銝?</p>
+              <div class="flex flex-wrap gap-2 mt-3">
+                <span v-for="r in currentUser.roles" :key="r" class="px-3 py-1 bg-white rounded-lg text-xs font-semibold text-brand-600 shadow-sm border border-brand-100">
+                  閫隞?Ⅳ: {{ r }}
+                </span>
+              </div>
+              <p v-if="canEditNews" class="text-xs text-emerald-600 mt-3 font-medium">
+                ???冽??撣?蝺刻摩???唳??胯?摰甈???              </p>
+              <p v-else class="text-xs text-amber-600 mt-3 font-medium">
+                ?對? ?函?撣唾??桀?閮剖??箏霈嚗?瘨?澆?甈?隢蝯∠頂蝯梁恣???              </p>
+            </div>
+          </div>
+
+          <!-- TAB 2: ??唳??舐撣?蝞∠? (News) -->
+          <div v-if="currentTab === 'news'" class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-lg font-bold text-slate-900">??唳??舐恣??/h2>
+                <p class="text-xs text-slate-500">蝞∠?摰?噸蝘?摰雯???啗???撣??砍??</p>
+              </div>
+              <button @click="openCreateNewsModal" :disabled="!canEditNews"
+                      :class="canEditNews ? 'bg-brand-600 hover:bg-brand-500 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'"
+                      class="px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm">
+                <span>??/span>
+                <span>?啣???唳???/span>
+              </button>
+            </div>
+
+            <!-- ?啗?皜?” -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div v-if="newsList.length === 0" class="p-8 text-center text-slate-400 text-xs">
+                ?桀?撠??唳??航???隢????寞??遣蝡洵銝蝑??荔?
+              </div>
+              <table v-else class="w-full text-left border-collapse text-xs">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th class="p-3.5">ID</th>
+                    <th class="p-3.5">蝜?銝剜?璅?</th>
+                    <th class="p-3.5">??</th>
+                    <th class="p-3.5">?澆???/th>
+                    <th class="p-3.5">???/th>
+                    <th class="p-3.5">?澆???</th>
+                    <th class="p-3.5 text-right">??</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr v-for="item in newsList" :key="item.id" class="hover:bg-slate-50/70 transition">
+                    <td class="p-3.5 text-slate-400">#{{ item.id }}</td>
+                    <td class="p-3.5 font-semibold text-slate-900 max-w-xs truncate">{{ item.titleZh }}</td>
+                    <td class="p-3.5">
+                      <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
+                        {{ item.category }}
+                      </span>
+                    </td>
+                    <td class="p-3.5 text-slate-600">{{ item.author || '蝟餌絞' }}</td>
+                    <td class="p-3.5">
+                      <span :class="item.isPublished ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'"
+                            class="px-2 py-0.5 rounded-full text-[10px] font-semibold border">
+                        {{ item.isPublished ? '撌脩撣? : '?阮' }}
+                      </span>
+                    </td>
+                    <td class="p-3.5 text-slate-500">{{ formatDate(item.publishedAt) }}</td>
+                    <td class="p-3.5 text-right space-x-2">
+                      <button @click="openEditNewsModal(item)" :disabled="!canEditNews"
+                              class="text-brand-600 hover:text-brand-700 font-semibold disabled:opacity-30">蝺刻摩</button>
+                      <button @click="deleteNews(item.id)" :disabled="!canEditNews"
+                              class="text-rose-600 hover:text-rose-700 font-semibold disabled:opacity-30">?芷</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 3: ?舐窗隢株岷?? (Contacts) -->
+          <div v-if="currentTab === 'contacts'" class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-lg font-bold text-slate-900">?舐窗?垣閰Ｚ”??/h2>
+                <p class="text-xs text-slate-500">摰雯閮芸恥?恥?嗥?銝?閮?單??園?蝝??/p>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div v-if="contactList.length === 0" class="p-8 text-center text-slate-400 text-xs">
+                ?桀?撠閮芸恥隢株岷????              </div>
+              <table v-else class="w-full text-left border-collapse text-xs">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th class="p-3.5">???/th>
+                    <th class="p-3.5">閮芸恥憪?</th>
+                    <th class="p-3.5">?砍?迂</th>
+                    <th class="p-3.5">Email / ?餉店</th>
+                    <th class="p-3.5">隢株岷憿</th>
+                    <th class="p-3.5">???批捆</th>
+                    <th class="p-3.5">????</th>
+                    <th class="p-3.5 text-right">???雿?/th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr v-for="item in contactList" :key="item.id" class="hover:bg-slate-50/70 transition">
+                    <td class="p-3.5">
+                      <span :class="getStatusBadgeClass(item.status)"
+                            class="px-2 py-0.5 rounded-full text-[10px] font-bold border">
+                        {{ formatStatus(item.status) }}
+                      </span>
+                    </td>
+                    <td class="p-3.5 font-semibold text-slate-900">{{ item.name }}</td>
+                    <td class="p-3.5 text-slate-600">{{ item.company || '-' }}</td>
+                    <td class="p-3.5 text-slate-600">
+                      <div>{{ item.email }}</div>
+                      <div class="text-[10px] text-slate-400">{{ item.phone }}</div>
+                    </td>
+                    <td class="p-3.5">
+                      <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px]">{{ item.category }}</span>
+                    </td>
+                    <td class="p-3.5 text-slate-700 max-w-xs truncate" :title="item.message">{{ item.message }}</td>
+                    <td class="p-3.5 text-slate-400">{{ formatDate(item.createdAt) }}</td>
+                    <td class="p-3.5 text-right space-x-1">
+                      <button v-if="item.status === 'PENDING'" @click="updateContactStatus(item.id, 'PROCESSING')"
+                              class="text-[11px] px-2 py-1 bg-amber-50 text-amber-700 rounded border border-amber-200 hover:bg-amber-100">??銝?/button>
+                      <button v-if="item.status !== 'COMPLETED'" @click="updateContactStatus(item.id, 'COMPLETED')"
+                              class="text-[11px] px-2 py-1 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 hover:bg-emerald-100">蝯?</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 4: 撣唾????脫???(Users - ?? SUPER_ADMIN) -->
+          <div v-if="currentTab === 'users' && isSuperAdmin" class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-lg font-bold text-slate-900">AD 蝬脣?撣唾????脫??身摰?/h2>
+                <p class="text-xs text-slate-500">?晷?砍 AD 蝬脣?撣唾??脣敺銝西釵鈭楊頛舀??澆?甈?</p>
+              </div>
+              <button @click="openAddUserModal"
+                      class="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-500 text-white transition flex items-center space-x-1.5 shadow-sm">
+                <span>??/span>
+                <span>????AD 撣唾?</span>
+              </button>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th class="p-3.5">AD 撣唾?</th>
+                    <th class="p-3.5">憪?</th>
+                    <th class="p-3.5">?券?</th>
+                    <th class="p-3.5">?晷閫 (Roles)</th>
+                    <th class="p-3.5">???/th>
+                    <th class="p-3.5">?敺?交???/th>
+                    <th class="p-3.5 text-right">閫隤踵</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr v-for="u in userList" :key="u.id" class="hover:bg-slate-50/70 transition">
+                    <td class="p-3.5 font-bold text-slate-900">{{ u.account }}</td>
+                    <td class="p-3.5 text-slate-700">{{ u.name }}</td>
+                    <td class="p-3.5 text-slate-500">{{ u.department || '摰?噸蝘?' }}</td>
+                    <td class="p-3.5">
+                      <div class="flex flex-wrap gap-1">
+                        <span v-for="r in u.roles" :key="r"
+                              class="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
+                          {{ r }}
+                        </span>
+                      </div>
+                    </td>
+                    <td class="p-3.5">
+                      <span :class="u.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'"
+                            class="px-2 py-0.5 rounded-full text-[10px] font-bold border">
+                        {{ u.isActive ? '甇?虜?' : '??銝? }}
+                      </span>
+                    </td>
+                    <td class="p-3.5 text-slate-400">{{ formatDate(u.lastLoginAt) }}</td>
+                    <td class="p-3.5 text-right space-x-1">
+                      <button @click="openEditUserModal(u)" class="text-brand-600 hover:text-brand-700 font-semibold">靽格閫</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </main>
+      </div>
+    </div>
+
+    <!-- MODAL 1: ?啣?/蝺刻摩?啗?敶? -->
+    <div v-if="newsModal.show" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+        <h3 class="text-base font-bold text-slate-900 mb-4">
+          {{ newsModal.isEdit ? '蝺刻摩??唳??? : '?澆??冽??唳??? }}
+        </h3>
+        <form @submit.prevent="saveNews" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">蝜?銝剜?璅? *</label>
+            <input v-model="newsModal.form.titleZh" type="text" required placeholder="靘?: 摰?噸蝘??潸”?冽頠擃????函頂??
+                   class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">?望?璅? (?舫)</label>
+            <input v-model="newsModal.form.titleEn" type="text" placeholder="SpeedTech Launches New High-Voltage Automotive Connectors"
+                   class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">瘨??</label>
+              <select v-model="newsModal.form.category" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs outline-none">
+                <option value="?砍??">?砍?? (Company)</option>
+                <option value="?Ｗ??潸”">?Ｗ??潸” (Product)</option>
+                <option value="瘞貊?ESG">瘞貊??冗?痊隞?(ESG)</option>
+                <option value="??鈭粹?靽?>??鈭粹?靽?(IR)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">?澆????/label>
+              <select v-model="newsModal.form.isPublished" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs outline-none">
+                <option :value="true">?喳?澆? (?祇?憿舐內?澆?蝬?</option>
+                <option :value="false">?怠??阮 (銝?憭??</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">?啗?閰喟敦?批捆 *</label>
+            <textarea v-model="newsModal.form.content" rows="6" required placeholder="隢撓?交??航底蝝啣??.."
+                      class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 outline-none"></textarea>
+          </div>
+          <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+            <button type="button" @click="newsModal.show = false"
+                    class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-medium hover:bg-slate-50">??</button>
+            <button type="submit"
+                    class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-sm">
+              {{ newsModal.isEdit ? '?脣?霈' : '蝣箄??澆?' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL 2: AD 撣唾??????脰身摰?蝒?-->
+    <div v-if="userModal.show" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+        <h3 class="text-base font-bold text-slate-900 mb-4">
+          {{ userModal.isEdit ? '隤踵 AD 撣唾?閫甈?' : '????AD 撣唾??喳??? }}
+        </h3>
+        <form @submit.prevent="saveUser" class="space-y-4 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">?砍 AD 撣唾? *</label>
+            <input v-model="userModal.form.account" :disabled="userModal.isEdit" type="text" required placeholder="靘?: st90506335"
+                   class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none disabled:bg-slate-100">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">憪? / ?∪極?典? *</label>
+            <input v-model="userModal.form.name" type="text" required placeholder="?之??
+                   class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">?撅祇?</label>
+            <input v-model="userModal.form.department" type="text" placeholder="銵??/ 鞈???/ ???
+                   class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1.5">??閫?晷 (?航???</label>
+            <div class="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <label class="flex items-center space-x-2">
+                <input type="checkbox" value="NEWS_EDITOR" v-model="userModal.form.roles" class="rounded text-brand-600">
+                <span class="font-medium text-slate-800">NEWS_EDITOR</span>
+                <span class="text-slate-400 text-[10px]">(?舀憓楊頛航??澆???唳???</span>
+              </label>
+              <label class="flex items-center space-x-2">
+                <input type="checkbox" value="CONTACT_VIEWER" v-model="userModal.form.roles" class="rounded text-brand-600">
+                <span class="font-medium text-slate-800">CONTACT_VIEWER</span>
+                <span class="text-slate-400 text-[10px]">(?舀?梯?璅?閮芸恥??)</span>
+              </label>
+              <label class="flex items-center space-x-2">
+                <input type="checkbox" value="SUPER_ADMIN" v-model="userModal.form.roles" class="rounded text-brand-600">
+                <span class="font-bold text-rose-600">SUPER_ADMIN</span>
+                <span class="text-slate-400 text-[10px]">(?典?蝞∠??擃???</span>
+              </label>
+            </div>
+          </div>
+          <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+            <button type="button" @click="userModal.show = false"
+                    class="px-4 py-2 rounded-xl border border-slate-300 font-medium hover:bg-slate-50">??</button>
+            <button type="submit"
+                    class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold">?脣???</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const isLoggedIn = ref(false);
+        const token = ref(localStorage.getItem('speedtech_admin_token') || '');
+        const currentUser = ref({});
+        const currentTab = ref('dashboard');
+        
+        // ?餃銵典
+        const loginForm = ref({ account: '', password: '' });
+        const isLoggingIn = ref(false);
+        const loginError = ref('');
+
+        // 鞈?皜
+        const newsList = ref([]);
+        const contactList = ref([]);
+        const userList = ref([]);
+
+        // ?內閮
+        const alertMessage = ref('');
+        const alertType = ref('success');
+
+        function showAlert(msg, type = 'success') {
+          alertMessage.value = msg;
+          alertType.value = type;
+          setTimeout(() => { alertMessage.value = ''; }, 4000);
+        }
+
+        // 敶????        const newsModal = ref({
+          show: false,
+          isEdit: false,
+          form: { id: null, titleZh: '', titleEn: '', category: '?砍??', content: '', isPublished: true, coverImage: '' }
+        });
+
+        const userModal = ref({
+          show: false,
+          isEdit: false,
+          form: { id: null, account: '', name: '', department: '摰?噸蝘?', roles: ['NEWS_EDITOR'] }
+        });
+
+        // 甈?瑼Ｘ閮?撅祆?        const canEditNews = computed(() => {
+          const roles = currentUser.value.roles || [];
+          return roles.includes('SUPER_ADMIN') || roles.includes('NEWS_EDITOR');
+        });
+
+        const isSuperAdmin = computed(() => {
+          const roles = currentUser.value.roles || [];
+          return roles.includes('SUPER_ADMIN');
+        });
+
+        const pendingInquiriesCount = computed(() => {
+          return contactList.value.filter(c => c.status === 'PENDING').length;
+        });
+
+        // API ?澆撌亙
+        async function api(path, options = {}) {
+          options.headers = options.headers || {};
+          if (token.value) {
+            options.headers['Authorization'] = `Bearer ${token.value}`;
+          }
+          if (options.body && typeof options.body === 'object') {
+            options.headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(options.body);
+          }
+
+          const res = await fetch(`/api${path}`, options);
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || '隢?憭望?');
+          }
+          return data;
+        }
+
+        // ?餃??
+        async function handleLogin() {
+          isLoggingIn.value = true;
+          loginError.value = '';
+          try {
+            const res = await api('/admin/auth/login', {
+              method: 'POST',
+              body: loginForm.value
+            });
+            token.value = res.token;
+            localStorage.setItem('speedtech_admin_token', res.token);
+            currentUser.value = res.user;
+            isLoggedIn.value = true;
+            await loadAllData();
+          } catch (err) {
+            loginError.value = err.message;
+          } finally {
+            isLoggingIn.value = false;
+          }
+        }
+
+        function handleLogout() {
+          token.value = '';
+          localStorage.removeItem('speedtech_admin_token');
+          isLoggedIn.value = false;
+          currentUser.value = {};
+        }
+
+        // 頛?嗅??餃??閮?        async function checkAuth() {
+          if (!token.value) return;
+          try {
+            const res = await api('/admin/auth/me');
+            currentUser.value = res.user;
+            isLoggedIn.value = true;
+            await loadAllData();
+          } catch (err) {
+            handleLogout();
+          }
+        }
+
+        async function loadAllData() {
+          await Promise.all([
+            fetchNews(),
+            fetchContacts(),
+            isSuperAdmin.value ? fetchUsers() : Promise.resolve()
+          ]);
+        }
+
+        // ??唳??舀?雿?        async function fetchNews() {
+          try {
+            const res = await api('/admin/news');
+            newsList.value = res.data;
+          } catch (err) {
+            console.error('Fetch news error:', err);
+          }
+        }
+
+        function openCreateNewsModal() {
+          newsModal.value = {
+            show: true,
+            isEdit: false,
+            form: { id: null, titleZh: '', titleEn: '', category: '?砍??', content: '', isPublished: true }
+          };
+        }
+
+        function openEditNewsModal(item) {
+          newsModal.value = {
+            show: true,
+            isEdit: true,
+            form: { ...item }
+          };
+        }
+
+        async function saveNews() {
+          try {
+            if (newsModal.value.isEdit) {
+              await api(`/admin/news/${newsModal.value.form.id}`, {
+                method: 'PUT',
+                body: newsModal.value.form
+              });
+              showAlert('??唳??舀?唳???');
+            } else {
+              await api('/admin/news', {
+                method: 'POST',
+                body: newsModal.value.form
+              });
+              showAlert('??唳??舐撣???');
+            }
+            newsModal.value.show = false;
+            await fetchNews();
+          } catch (err) {
+            showAlert(err.message, 'error');
+          }
+        }
+
+        async function deleteNews(id) {
+          if (!confirm('蝣箏?閬?日?瘨??')) return;
+          try {
+            await api(`/admin/news/${id}`, { method: 'DELETE' });
+            showAlert('瘨撌脣?歹?');
+            await fetchNews();
+          } catch (err) {
+            showAlert(err.message, 'error');
+          }
+        }
+
+        // ?舐窗銵典??
+        async function fetchContacts() {
+          try {
+            const res = await api('/admin/contacts');
+            contactList.value = res.data;
+          } catch (err) {
+            console.error('Fetch contacts error:', err);
+          }
+        }
+
+        async function updateContactStatus(id, status) {
+          try {
+            await api(`/admin/contacts/${id}`, {
+              method: 'PATCH',
+              body: { status }
+            });
+            showAlert('??歇?湔');
+            await fetchContacts();
+          } catch (err) {
+            showAlert(err.message, 'error');
+          }
+        }
+
+        // 雿輻???恣??        async function fetchUsers() {
+          if (!isSuperAdmin.value) return;
+          try {
+            const res = await api('/admin/users');
+            userList.value = res.data;
+          } catch (err) {
+            console.error('Fetch users error:', err);
+          }
+        }
+
+        function openAddUserModal() {
+          userModal.value = {
+            show: true,
+            isEdit: false,
+            form: { id: null, account: '', name: '', department: '摰?噸蝘?', roles: ['NEWS_EDITOR'] }
+          };
+        }
+
+        function openEditUserModal(u) {
+          userModal.value = {
+            show: true,
+            isEdit: true,
+            form: { id: u.id, account: u.account, name: u.name, department: u.department, roles: [...u.roles] }
+          };
+        }
+
+        async function saveUser() {
+          try {
+            if (userModal.value.isEdit) {
+              await api(`/admin/users/${userModal.value.form.id}`, {
+                method: 'PUT',
+                body: userModal.value.form
+              });
+              showAlert('雿輻???歇?湔嚗?);
+            } else {
+              await api('/admin/users', {
+                method: 'POST',
+                body: userModal.value.form
+              });
+              showAlert('AD 撣唾?????嚗?);
+            }
+            userModal.value.show = false;
+            await fetchUsers();
+          } catch (err) {
+            showAlert(err.message, 'error');
+          }
+        }
+
+        // 頛?澆??撘?        function formatDate(str) {
+          if (!str) return '-';
+          return new Date(str).toLocaleDateString('zh-TW', {
+            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+          });
+        }
+
+        function formatStatus(status) {
+          const map = { PENDING: '?芾???, PROCESSING: '??銝?, COMPLETED: '撌脩?獢? };
+          return map[status] || status;
+        }
+
+        function getStatusBadgeClass(status) {
+          const map = {
+            PENDING: 'bg-rose-50 text-rose-700 border-rose-200',
+            PROCESSING: 'bg-amber-50 text-amber-700 border-amber-200',
+            COMPLETED: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+          };
+          return map[status] || 'bg-slate-100 text-slate-700 border-slate-200';
+        }
+
+        onMounted(() => {
+          checkAuth();
+        });
+
+        return {
+          isLoggedIn, currentUser, currentTab, loginForm, isLoggingIn, loginError,
+          newsList, contactList, userList, alertMessage, alertType,
+          newsModal, userModal, canEditNews, isSuperAdmin, pendingInquiriesCount,
+          handleLogin, handleLogout, openCreateNewsModal, openEditNewsModal, saveNews, deleteNews,
+          updateContactStatus, openAddUserModal, openEditUserModal, saveUser,
+          formatDate, formatStatus, getStatusBadgeClass
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
